@@ -116,7 +116,7 @@ const StudentView: React.FC = () => {
       
       {currentAttempt && (
         <div className="exam-details" style={{ marginBottom: '20px', backgroundColor: '#e8f5e8' }}>
-          <h4>Current Attempt in Progress</h4>
+          <h4>Current Attempt in Progress: {currentAttempt.examTitle || 'Unknown Exam'} - Attempt #{currentAttempt.attemptNumber}</h4>
           <button
             onClick={handleSubmitAttempt}
             disabled={loading}

@@ -191,7 +191,7 @@ namespace ExamSystem.Tests.Services
         }
 
         /// <summary>
-        /// Test: Get exam with cooldown should set next attempt available time
+        /// Test: Get exam with cooldown should set next attempt available time based on StartTime
         /// </summary>
         [Fact]
         public async Task GetExamForStudent_ShouldSetCooldownTime_WhenCooldownActive()
@@ -212,7 +212,8 @@ namespace ExamSystem.Tests.Services
                 StudentId = studentId,
                 AttemptNumber = 1,
                 AttemptStatus = "Completed",
-                StartTime = DateTime.UtcNow.AddMinutes(-30) // 30 minutes ago, cooldown still active
+                StartTime = DateTime.UtcNow.AddMinutes(-30), // Started 30 minutes ago, cooldown still active
+                EndTime = DateTime.UtcNow.AddMinutes(-10) // Completed 10 minutes ago
             };
             _context.Exams.Add(exam);
             _context.Attempts.Add(recentAttempt);
@@ -225,6 +226,44 @@ namespace ExamSystem.Tests.Services
             Assert.NotNull(result);
             Assert.NotNull(result.NextAttemptAvailableAt);
             Assert.True(result.NextAttemptAvailableAt > DateTime.UtcNow);
+        }
+
+        /// <summary>
+        /// Test: Get exam should set cooldown based on StartTime regardless of EndTime
+        /// </summary>
+        [Fact]
+        public async Task GetExamForStudent_ShouldSetCooldown_BasedOnStartTime()
+        {
+            // Arrange
+            var studentId = Guid.NewGuid();
+            var exam = new Exam
+            {
+                ExamId = Guid.NewGuid(),
+                Title = "Test Exam",
+                MaxAttempts = 3,
+                CooldownMinutes = 60
+            };
+            var previousAttempt = new Attempt
+            {
+                AttemptId = Guid.NewGuid(),
+                ExamId = exam.ExamId,
+                StudentId = studentId,
+                AttemptNumber = 1,
+                AttemptStatus = "Completed",
+                StartTime = DateTime.UtcNow.AddMinutes(-30), // Started 30 minutes ago, cooldown still active
+                EndTime = null // EndTime doesn't matter for cooldown calculation
+            };
+            _context.Exams.Add(exam);
+            _context.Attempts.Add(previousAttempt);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _examService.GetExamForStudentAsync(studentId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.NotNull(result.NextAttemptAvailableAt); // Cooldown should be set based on StartTime
+            Assert.Equal(2, result.RemainingAttempts);
         }
 
         /// <summary>
@@ -310,7 +349,7 @@ namespace ExamSystem.Tests.Services
         }
 
         /// <summary>
-        /// Test: Start attempt during cooldown period should return null
+        /// Test: Start attempt during cooldown period should return null (cooldown based on StartTime)
         /// </summary>
         [Fact]
         public async Task StartAttempt_ShouldReturnNull_WhenCooldownActive()
@@ -331,7 +370,8 @@ namespace ExamSystem.Tests.Services
                 StudentId = studentId,
                 AttemptNumber = 1,
                 AttemptStatus = "Completed",
-                StartTime = DateTime.UtcNow.AddMinutes(-30) // 30 minutes ago, cooldown still active
+                StartTime = DateTime.UtcNow.AddMinutes(-30), // Started 30 minutes ago, cooldown still active
+                EndTime = DateTime.UtcNow.AddMinutes(-10) // Completed 10 minutes ago
             };
             _context.Exams.Add(exam);
             _context.Attempts.Add(recentAttempt);
@@ -342,6 +382,42 @@ namespace ExamSystem.Tests.Services
 
             // Assert
             Assert.Null(result);
+        }
+
+        /// <summary>
+        /// Test: Start attempt should be blocked by cooldown based on StartTime regardless of EndTime
+        /// </summary>
+        [Fact]
+        public async Task StartAttempt_ShouldReturnNull_WhenCooldownActiveBasedOnStartTime()
+        {
+            // Arrange
+            var studentId = Guid.NewGuid();
+            var exam = new Exam
+            {
+                ExamId = Guid.NewGuid(),
+                Title = "Test Exam",
+                MaxAttempts = 3,
+                CooldownMinutes = 60
+            };
+            var previousAttempt = new Attempt
+            {
+                AttemptId = Guid.NewGuid(),
+                ExamId = exam.ExamId,
+                StudentId = studentId,
+                AttemptNumber = 1,
+                AttemptStatus = "Completed",
+                StartTime = DateTime.UtcNow.AddMinutes(-30), // Started 30 minutes ago, cooldown still active
+                EndTime = null // EndTime doesn't matter for cooldown calculation
+            };
+            _context.Exams.Add(exam);
+            _context.Attempts.Add(previousAttempt);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _examService.StartAttemptAsync(studentId);
+
+            // Assert
+            Assert.Null(result); // Should be blocked by cooldown
         }
 
         /// <summary>
@@ -543,6 +619,10 @@ namespace ExamSystem.Tests.Services
             var otherStudentId = Guid.NewGuid();
             var examId = Guid.NewGuid();
             
+            // Add exam first to satisfy foreign key constraint
+            var exam = new Exam { ExamId = examId, Title = "Test Exam", MaxAttempts = 3, CooldownMinutes = 0 };
+            _context.Exams.Add(exam);
+            
             var attempts = new List<Attempt>
             {
                 new Attempt { AttemptId = Guid.NewGuid(), ExamId = examId, StudentId = studentId, AttemptNumber = 2, AttemptStatus = "Completed" },
@@ -559,7 +639,6 @@ namespace ExamSystem.Tests.Services
             Assert.Equal(2, result.Count);
             Assert.Equal(1, result[0].AttemptNumber); // Should be ordered by attempt number
             Assert.Equal(2, result[1].AttemptNumber);
-            Assert.All(result, attempt => Assert.Equal(studentId, attempt.AttemptId != Guid.Empty ? studentId : studentId));
         }
 
         /// <summary>
@@ -593,13 +672,9 @@ namespace ExamSystem.Tests.Services
             var student2Id = Guid.NewGuid();
             var examId = Guid.NewGuid();
             
-            // Add users first to support navigation properties
-            var users = new List<User>
-            {
-                new User { Id = student1Id, Username = "student1", PasswordHash = "hash1", Role = "Student" },
-                new User { Id = student2Id, Username = "student2", PasswordHash = "hash2", Role = "Student" }
-            };
-            _context.Users.AddRange(users);
+            // Add exam first to satisfy foreign key constraint
+            var exam = new Exam { ExamId = examId, Title = "Test Exam", MaxAttempts = 5, CooldownMinutes = 0 };
+            _context.Exams.Add(exam);
             
             var attempts = new List<Attempt>
             {

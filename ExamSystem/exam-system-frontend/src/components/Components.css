@@ -210,39 +210,38 @@ body {
   font-weight: 500;
 }
 
-.login-container {
-  max-width: 400px;
-  margin: 5rem auto;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+.view-switcher {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
-.login-container h2 {
-  text-align: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-  margin-bottom: 2rem;
-  font-size: 2rem;
-}
-
-.demo-credentials {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  border-radius: 8px;
+.view-switcher .btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
   font-size: 0.875rem;
-  color: #6b7280;
+  border: none;
 }
 
-.demo-credentials p {
-  margin: 0.25rem 0;
+.view-switcher .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
 }
+
+.view-switcher .btn-secondary {
+  background: #6b7280;
+  color: white;
+}
+
+.view-switcher .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+
 
 .exam-details {
   background: white;

@@ -93,6 +93,7 @@ namespace ExamSystem.API.Services
             if (attempts.Any() && exam.CooldownMinutes > 0)
             {
                 var lastAttempt = attempts.First();
+                // Cooldown starts from StartTime (when attempt began)
                 var cooldownEnd = lastAttempt.StartTime.AddMinutes(exam.CooldownMinutes);
                 if (cooldownEnd > DateTime.UtcNow)
                 {
@@ -214,6 +215,7 @@ namespace ExamSystem.API.Services
             if (existingAttempts.Any() && exam.CooldownMinutes > 0)
             {
                 var lastAttempt = existingAttempts.OrderByDescending(a => a.StartTime).First();
+                // Cooldown starts from StartTime (when attempt began)
                 var cooldownEnd = lastAttempt.StartTime.AddMinutes(exam.CooldownMinutes);
                 if (cooldownEnd > DateTime.UtcNow) return null; // Still in cooldown
             }
@@ -318,6 +320,7 @@ namespace ExamSystem.API.Services
                 if (attempts.Any() && exam.CooldownMinutes > 0)
                 {
                     var lastAttempt = attempts.OrderByDescending(a => a.StartTime).First();
+                    // Cooldown starts from StartTime (when attempt began)
                     var cooldownEnd = lastAttempt.StartTime.AddMinutes(exam.CooldownMinutes);
                     if (cooldownEnd > DateTime.UtcNow)
                     {
